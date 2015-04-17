@@ -26,6 +26,7 @@
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #include "executor/spi.h"
 #pragma GCC diagnostic pop
+#include "catalog/catalog.h"
 #include "catalog/namespace.h"
 #include "catalog/pg_type.h"
 #include "nodes/makefuncs.h"
@@ -377,6 +378,7 @@ PartitionType(Oid distributedTableId)
 bool
 IsDistributedTable(Oid tableId)
 {
+	Oid tableNamespaceOid = get_rel_namespace(tableId);
 	Oid metadataNamespaceOid = get_namespace_oid("pgs_distribution_metadata", false);
 	Oid partitionMetadataTableOid = get_relname_relid("partition", metadataNamespaceOid);
 	bool isDistributedTable = false;
@@ -389,7 +391,7 @@ IsDistributedTable(Oid tableId)
 	 * The query below hits the partition metadata table, so if we don't detect
 	 * that and short-circuit, we'll get infinite recursion in the planner.
 	 */
-	if (tableId == partitionMetadataTableOid)
+	if (IsSystemNamespace(tableNamespaceOid) || tableId == partitionMetadataTableOid)
 	{
 		return false;
 	}
