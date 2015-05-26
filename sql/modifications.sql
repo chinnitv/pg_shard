@@ -54,6 +54,12 @@ INSERT INTO limit_orders VALUES (random() * 100, 'ORCL', 152, '2011-08-25 11:50:
 -- commands with expressions that cannot be collapsed are unsupported
 INSERT INTO limit_orders VALUES (2036, 'GOOG', 5634, now(), 'buy', random());
 
+-- commands with mutable functions in their quals
+DELETE FROM limit_orders WHERE id = 246 AND bidder_id = (random() * 1000);
+
+-- commands with mutable but non-volatilte functions(ie: stable func.) in their quals
+DELETE FROM limit_orders WHERE id = 246 AND placed_at = current_timestamp;
+
 -- commands with multiple rows are unsupported
 INSERT INTO limit_orders VALUES (DEFAULT), (DEFAULT);
 
@@ -115,8 +121,41 @@ SELECT bidder_id FROM limit_orders WHERE id = 246;
 UPDATE limit_orders SET (kind, limit_price) = ('buy', DEFAULT) WHERE id = 246;
 SELECT kind, limit_price FROM limit_orders WHERE id = 246;
 
+-- First: Duplicate placements but use a bad hostname
+-- Next: Issue a modification. It will hit a bad placement
+-- Last: Verify that the unreachable placement was marked unhealthy
+WITH limit_order_placements AS (
+		SELECT sp.*
+		FROM   pgs_distribution_metadata.shard_placement AS sp,
+			   pgs_distribution_metadata.shard           AS s
+		WHERE  sp.shard_id = s.id
+		AND    s.relation_id = 'limit_orders'::regclass
+	)
+INSERT INTO pgs_distribution_metadata.shard_placement
+SELECT nextval('pgs_distribution_metadata.shard_placement_id_sequence'),
+	   shard_id,
+	   shard_state,
+	   'badhost',
+	   54321
+FROM   limit_order_placements;
+
+\set VERBOSITY terse
+INSERT INTO limit_orders VALUES (275, 'ADR', 140, '2007-07-02 16:32:15', 'sell', 43.67);
+\set VERBOSITY default
+
+SELECT count(*)
+FROM   pgs_distribution_metadata.shard_placement AS sp,
+	   pgs_distribution_metadata.shard           AS s
+WHERE  sp.shard_id = s.id
+AND    sp.node_name = 'badhost'
+AND    sp.shard_state = 3
+AND    s.relation_id = 'limit_orders'::regclass;
+
 -- commands with no constraints on the partition key are not supported
 UPDATE limit_orders SET limit_price = 0.00;
+
+-- attempting to change the partition key is unsupported
+UPDATE limit_orders SET id = 0 WHERE id = 246;
 
 -- UPDATEs with a FROM clause are unsupported
 UPDATE limit_orders SET limit_price = 0.00 FROM bidders

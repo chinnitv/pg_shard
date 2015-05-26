@@ -16,8 +16,6 @@
 #include "funcapi.h"
 #include "libpq-fe.h"
 #include "miscadmin.h"
-#include "pg_config_manual.h"
-#include "postgres_ext.h"
 
 #include "pg_shard.h"
 #include "connection.h"
@@ -393,6 +391,7 @@ ErrorIfQueryNotSupported(Query *queryTree)
 	bool hasValuesScan = false;
 	uint32 queryTableCount = 0;
 	bool hasNonConstTargetEntryExprs = false;
+	bool hasNonConstQualExprs = false;
 	bool specifiesPartitionValue = false;
 
 	CmdType commandType = queryTree->commandType;
@@ -515,6 +514,7 @@ ErrorIfQueryNotSupported(Query *queryTree)
 	if (commandType == CMD_INSERT || commandType == CMD_UPDATE ||
 		commandType == CMD_DELETE)
 	{
+		FromExpr *joinTree = NULL;
 		ListCell *targetEntryCell = NULL;
 
 		foreach(targetEntryCell, queryTree->targetList)
@@ -537,9 +537,15 @@ ErrorIfQueryNotSupported(Query *queryTree)
 				specifiesPartitionValue = true;
 			}
 		}
+
+		joinTree = queryTree->jointree;
+		if (joinTree != NULL && contain_mutable_functions(joinTree->quals))
+		{
+			hasNonConstQualExprs = true;
+		}
 	}
 
-	if (hasNonConstTargetEntryExprs)
+	if (hasNonConstTargetEntryExprs || hasNonConstQualExprs)
 	{
 		ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 						errmsg("cannot plan sharded modification containing values "
@@ -833,7 +839,7 @@ PlanSequentialScan(Query *query, int cursorOptions, ParamListInfo boundParams)
 			{
 				ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
 								errmsg("multi-shard SELECTs from foreign tables are "
-									   "unsupported ")));
+									   "unsupported")));
 			}
 		}
 	}
@@ -897,8 +903,8 @@ QueryRestrictList(Query *query)
 
 /*
  * ExtractPartitionValue extracts the partition column value from a the target
- * of a modification command. If a partition value is not a constant, is NULL,
- * or is missing altogether, this function throws an error.
+ * of a modification command. If a partition value is missing altogether or is
+ * NULL, this function throws an error.
  */
 static Const *
 ExtractPartitionValue(Query *query, Var *partitionColumn)
@@ -908,12 +914,7 @@ ExtractPartitionValue(Query *query, Var *partitionColumn)
 												partitionColumn->varattno);
 	if (targetEntry != NULL)
 	{
-		if (!IsA(targetEntry->expr, Const))
-		{
-			ereport(ERROR, (errcode(ERRCODE_FEATURE_NOT_SUPPORTED),
-							errmsg("cannot plan INSERT to a distributed table "
-								   "using a non-constant partition column value")));
-		}
+		Assert(IsA(targetEntry->expr, Const));
 
 		partitionValue = (Const *) targetEntry->expr;
 	}
@@ -1795,10 +1796,7 @@ ExecuteDistributedModify(DistributedPlan *plan)
 	{
 		ShardPlacement *failedPlacement = (ShardPlacement *) lfirst(failedPlacementCell);
 
-		DeleteShardPlacementRow(failedPlacement->id);
-		InsertShardPlacementRow(failedPlacement->id, failedPlacement->shardId,
-								STATE_INACTIVE, failedPlacement->nodeName,
-								failedPlacement->nodePort);
+		UpdateShardPlacementRowState(failedPlacement->id, STATE_INACTIVE);
 	}
 
 	return affectedTupleCount;
