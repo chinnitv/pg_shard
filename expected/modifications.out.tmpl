@@ -18,8 +18,8 @@ SELECT master_create_distributed_table('limit_orders', 'id');
 
 \set VERBOSITY terse
 SELECT master_create_worker_shards('limit_orders', 2, 1);
-WARNING:  Connection failed to adeadhost:$PGPORT
-WARNING:  could not create shard on "adeadhost:$PGPORT"
+WARNING:  Connection failed to adeadhost:5432
+WARNING:  could not create shard on "adeadhost:5432"
  master_create_worker_shards 
 -----------------------------
  
@@ -62,7 +62,7 @@ ERROR:  cannot plan INSERT using row with NULL value in partition column
 -- INSERT violating column constraint
 INSERT INTO limit_orders VALUES (18811, 'BUD', 14962, '2014-04-05 08:32:16', 'sell',
 								 -5.00);
-WARNING:  Bad result from localhost:5432
+WARNING:  Bad result from localhost:$PGPORT
 DETAIL:  Remote message: new row for relation "limit_orders_10034" violates check constraint "limit_orders_limit_price_check"
 ERROR:  could not modify any active placements
 -- INSERT violating primary key constraint
