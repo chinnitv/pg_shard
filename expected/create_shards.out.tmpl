@@ -170,8 +170,8 @@ SELECT sort_names('sumedh', 'jason', 'ozgun');
 (1 row)
 
 -- test remote command execution
-SELECT create_table_then_fail('localhost', 5432);
-WARNING:  Bad result from localhost:5432
+SELECT create_table_then_fail('localhost', $PGPORT);
+WARNING:  Bad result from localhost:$PGPORT
 DETAIL:  Remote message: syntax error at or near "THIS"
  create_table_then_fail 
 ------------------------
@@ -250,8 +250,6 @@ DELETE FROM pgs_distribution_metadata.shard_placement
 					   WHERE relation_id = 'foreign_table_to_distribute'::regclass);
 	
 DELETE FROM pgs_distribution_metadata.shard
-	WHERE relation_id = 'foreign_table_to_distribute'::regclass;
-	
-DELETE FROM pgs_distribution_metadata.partition
 	WHERE relation_id = 'foreign_table_to_distribute'::regclass;	
-\set VERBOSITY default
+	
+	

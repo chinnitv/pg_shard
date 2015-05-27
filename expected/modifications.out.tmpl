@@ -18,8 +18,8 @@ SELECT master_create_distributed_table('limit_orders', 'id');
 
 \set VERBOSITY terse
 SELECT master_create_worker_shards('limit_orders', 2, 1);
-WARNING:  Connection failed to adeadhost:5432
-WARNING:  could not create shard on "adeadhost:5432"
+WARNING:  Connection failed to adeadhost:$PGPORT
+WARNING:  could not create shard on "adeadhost:$PGPORT"
  master_create_worker_shards 
 -----------------------------
  
@@ -67,7 +67,7 @@ DETAIL:  Remote message: new row for relation "limit_orders_10034" violates chec
 ERROR:  could not modify any active placements
 -- INSERT violating primary key constraint
 INSERT INTO limit_orders VALUES (32743, 'LUV', 5994, '2001-04-16 03:37:28', 'buy', 0.58);
-WARNING:  Bad result from localhost:5432
+WARNING:  Bad result from localhost:$PGPORT
 DETAIL:  Remote message: duplicate key value violates unique constraint "limit_orders_pkey_10035"
 ERROR:  could not modify any active placements
 -- commands with non-constant partition values are unsupported
