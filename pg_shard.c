@@ -579,7 +579,7 @@ ExtractFirstDistributedTableId(Query *query)
 	{
 		RangeTblEntry *rangeTableEntry = (RangeTblEntry *) lfirst(rangeTableCell);
 
-		if (rangeTableEntry->rtekind == RTE_RELATION && IsDistributedTable(rangeTableEntry->relid))
+		if (IsDistributedTable(rangeTableEntry->relid))
 		{
 			distributedTableId = rangeTableEntry->relid;
 			break;
