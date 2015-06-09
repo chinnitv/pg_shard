@@ -4,7 +4,7 @@
 \echo Use "CREATE EXTENSION pg_shard" to load this file. \quit
 
 -- needed in our views
-CREATE FUNCTION column_to_column_name(table_oid oid, column_var text)
+CREATE FUNCTION column_to_column_name(table_oid regclass, column_var text)
 RETURNS text
 AS 'MODULE_PATHNAME'
 LANGUAGE C STABLE STRICT;
@@ -46,6 +46,20 @@ BEGIN
 		END
 		$aais$ LANGUAGE plpgsql;
 
+		CREATE FUNCTION adapt_and_update_shard() RETURNS TRIGGER AS $aaus$
+		BEGIN
+			UPDATE pg_dist_shard
+			SET logicalrelid=NEW.relation_id,
+				shardid=NEW.id,
+				shardstorage=NEW.storage,
+				shardminvalue=NEW.min_value,
+				shardmaxvalue=NEW.max_value
+			WHERE shardid=OLD.id;
+
+			RETURN NEW;
+		END
+		$aaus$ LANGUAGE plpgsql;
+
 		CREATE FUNCTION adapt_and_insert_shard_placement() RETURNS trigger AS $aaisp$
 		BEGIN
 			INSERT INTO pg_dist_shard_placement
@@ -79,6 +93,18 @@ BEGIN
 		END
 		$aaip$ LANGUAGE plpgsql;
 
+		CREATE FUNCTION adapt_and_update_partition() RETURNS trigger AS $aaup$
+		BEGIN
+			UPDATE pg_dist_partition
+			SET logicalrelid=NEW.relation_id,
+				partmethod=NEW.partition_method,
+				partkey=column_name_to_column(NEW.relation_id::oid, NEW.key)
+			WHERE logicalrelid=OLD.relation_id;
+
+			RETURN NEW;
+		END
+		$aaup$ LANGUAGE plpgsql;
+
 		-- metadata relations are views under CitusDB
 		CREATE SCHEMA pgs_distribution_metadata
 			CREATE VIEW shard AS
@@ -92,6 +118,10 @@ BEGIN
 			CREATE TRIGGER shard_insert INSTEAD OF INSERT ON shard
 				FOR EACH ROW
 				EXECUTE PROCEDURE adapt_and_insert_shard()
+
+			CREATE TRIGGER shard_update INSTEAD OF UPDATE ON shard
+				FOR EACH ROW
+				EXECUTE PROCEDURE adapt_and_update_shard()
 
 			CREATE VIEW shard_placement AS
 				SELECT oid::bigint AS id,
@@ -108,12 +138,16 @@ BEGIN
 			CREATE VIEW partition AS
 				SELECT logicalrelid::regclass AS relation_id,
 					   partmethod             AS partition_method,
-					   column_to_column_name(relation_id, partkey) AS key
+					   column_to_column_name(logicalrelid, partkey) AS key
 				FROM   pg_dist_partition
 
 			CREATE TRIGGER partition_insert INSTEAD OF INSERT ON partition
 				FOR EACH ROW
-				EXECUTE PROCEDURE adapt_and_insert_partition();
+				EXECUTE PROCEDURE adapt_and_insert_partition()
+
+			CREATE TRIGGER partition_update INSTEAD OF UPDATE ON partition
+				FOR EACH ROW
+				EXECUTE PROCEDURE adapt_and_update_partition();
 
 	ELSE
 		-- the pgs_distribution_metadata schema stores data distribution information
@@ -204,7 +238,7 @@ RETURNS text
 AS 'MODULE_PATHNAME'
 LANGUAGE C;
 
-CREATE FUNCTION column_name_to_column(table_oid oid, column_name text)
+CREATE FUNCTION column_name_to_column(table_oid regclass, column_name text)
 RETURNS text
 AS 'MODULE_PATHNAME'
 LANGUAGE C STABLE STRICT;

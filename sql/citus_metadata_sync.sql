@@ -37,14 +37,14 @@ SELECT partition_column_to_node_string('pg_class'::regclass);
 SELECT partition_column_to_node_string('set_of_ids'::regclass);
 
 -- should get error for column names that are too long
-SELECT column_name_to_column('set_of_ids'::regclass, repeat('a', 1024));
+SELECT column_name_to_column('set_of_ids', repeat('a', 1024));
 
 -- should get error for system or non-existent column
-SELECT column_name_to_column('set_of_ids'::regclass, 'ctid');
-SELECT column_name_to_column('set_of_ids'::regclass, 'non_existent');
+SELECT column_name_to_column('set_of_ids', 'ctid');
+SELECT column_name_to_column('set_of_ids', 'non_existent');
 
 -- should get node representation for valid column
-SELECT column_name_to_column('set_of_ids'::regclass, 'id') AS column_var
+SELECT column_name_to_column('set_of_ids', 'id') AS column_var
 \gset
 
 SELECT replace(:'column_var', ':varattno 1', ':varattno -1') AS ctid_var,
@@ -52,11 +52,11 @@ SELECT replace(:'column_var', ':varattno 1', ':varattno -1') AS ctid_var,
 \gset
 
 -- should get error for system or non-existent column
-SELECT column_to_column_name('set_of_ids'::regclass, :'ctid_var');
-SELECT column_to_column_name('set_of_ids'::regclass, :'non_ext_var');
+SELECT column_to_column_name('set_of_ids', :'ctid_var');
+SELECT column_to_column_name('set_of_ids', :'non_ext_var');
 
 -- should get node representation for valid column
-SELECT column_to_column_name('set_of_ids'::regclass, :'column_var');
+SELECT column_to_column_name('set_of_ids', :'column_var');
 
 -- create subset of CitusDB metadata schema
 CREATE TABLE pg_dist_partition (

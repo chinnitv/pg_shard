@@ -1,10 +1,10 @@
 -- needed in our views
-CREATE FUNCTION column_to_column_name(table_oid oid, column_var text)
+CREATE FUNCTION column_to_column_name(table_oid regclass, column_var text)
 RETURNS text
 AS 'MODULE_PATHNAME'
 LANGUAGE C STABLE STRICT;
 
-CREATE FUNCTION column_name_to_column(table_oid oid, column_name text)
+CREATE FUNCTION column_name_to_column(table_oid regclass, column_name text)
 RETURNS text
 AS 'MODULE_PATHNAME'
 LANGUAGE C STABLE STRICT;
@@ -121,7 +121,7 @@ BEGIN
 		CREATE VIEW pgs_distribution_metadata.partition AS
 			SELECT logicalrelid::regclass AS relation_id,
 				   partmethod             AS partition_method,
-				   column_to_column_name(relation_id, partkey) AS key
+				   column_to_column_name(logicalrelid, partkey) AS key
 			FROM   pg_dist_partition;
 
 		CREATE TRIGGER partition_insert
