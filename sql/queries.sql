@@ -163,11 +163,11 @@ BEGIN;
 	SERVER fake_fdw_server;
 
 	UPDATE pgs_distribution_metadata.partition
-	SET relation_id='foreign_articles'::regclass
+	SET relation_id='foreign_articles'
 	WHERE relation_id='articles'::regclass;
 
 	UPDATE pgs_distribution_metadata.shard
-	SET relation_id='foreign_articles'::regclass
+	SET relation_id='foreign_articles'
 	WHERE relation_id='articles'::regclass;
 
 	SET pg_shard.log_distributed_statements = on;

@@ -12,8 +12,8 @@ CREATE TABLE set_of_ids ( id bigint );
 INSERT INTO pgs_distribution_metadata.shard
 	(id, relation_id, storage, min_value, max_value)
 VALUES
-	(1, 'set_of_ids'::regclass, 't', '0', '10'),
-	(2, 'set_of_ids'::regclass, 't', '10', '20');
+	(1, 'set_of_ids', 't', '0', '10'),
+	(2, 'set_of_ids', 't', '10', '20');
 
 -- two shards, replication factor two
 INSERT INTO pgs_distribution_metadata.shard_placement
@@ -26,7 +26,7 @@ VALUES
 
 INSERT INTO pgs_distribution_metadata.partition (relation_id, partition_method, key)
 VALUES
-	('set_of_ids'::regclass, 'h', 'id');
+	('set_of_ids', 'h', 'id');
 
 -- should get ERROR for NULL, non-existent, or non-distributed table
 SELECT partition_column_to_node_string(NULL);

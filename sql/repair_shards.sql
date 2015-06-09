@@ -12,12 +12,12 @@ CREATE INDEX ON customer_engagements (event_data);
 
 INSERT INTO pgs_distribution_metadata.partition (relation_id, partition_method, key)
 VALUES
-	('customer_engagements'::regclass, 'h', 'id');
+	('customer_engagements', 'h', 'id');
 
 INSERT INTO pgs_distribution_metadata.shard
 	(id, relation_id, storage, min_value, max_value)
 VALUES
-	(20, 'customer_engagements'::regclass, 't', '-2147483648', '2147483647');
+	(20, 'customer_engagements', 't', '-2147483648', '2147483647');
 
 -- Note we are "distributing" this table on localhost and 127.0.0.1, i.e. two
 -- hostnames for the same machine. This is a hack to get the pg_shard master to
@@ -67,12 +67,12 @@ CREATE FOREIGN TABLE remote_engagements (
 
 INSERT INTO pgs_distribution_metadata.partition (relation_id, partition_method, key)
 VALUES
-	('remote_engagements'::regclass, 'h', 'id');
+	('remote_engagements', 'h', 'id');
 
 INSERT INTO pgs_distribution_metadata.shard
 	(id, relation_id, storage, min_value, max_value)
 VALUES
-	(30, 'remote_engagements'::regclass, 'f', '-2147483648', '2147483647');
+	(30, 'remote_engagements', 'f', '-2147483648', '2147483647');
 
 INSERT INTO pgs_distribution_metadata.shard_placement
 	(id, node_name, node_port, shard_id, shard_state)

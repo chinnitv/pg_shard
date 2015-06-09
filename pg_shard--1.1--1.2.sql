@@ -93,11 +93,11 @@ BEGIN
 
 		-- metadata relations are views under CitusDB
 		CREATE VIEW pgs_distribution_metadata.shard AS
-			SELECT shardid       AS id,
-				   logicalrelid  AS relation_id,
-				   shardstorage  AS storage,
-				   shardminvalue AS min_value,
-				   shardmaxvalue AS max_value
+			SELECT shardid                AS id,
+				   logicalrelid::regclass AS relation_id,
+				   shardstorage           AS storage,
+				   shardminvalue          AS min_value,
+				   shardmaxvalue          AS max_value
 			FROM   pg_dist_shard;
 
 		CREATE TRIGGER shard_insert
@@ -119,9 +119,9 @@ BEGIN
 			EXECUTE PROCEDURE adapt_and_insert_shard_placement();
 
 		CREATE VIEW pgs_distribution_metadata.partition AS
-			SELECT logicalrelid AS relation_id,
-				   partmethod   AS partition_method,
-				   column_to_column_name(logicalrelid, partkey) AS key
+			SELECT logicalrelid::regclass AS relation_id,
+				   partmethod             AS partition_method,
+				   column_to_column_name(relation_id, partkey) AS key
 			FROM   pg_dist_partition;
 
 		CREATE TRIGGER partition_insert
@@ -129,6 +129,12 @@ BEGIN
 			FOR EACH ROW
 			EXECUTE PROCEDURE adapt_and_insert_partition();
 	ELSE
+		-- switch to regclass for table identifiers
+		ALTER TABLE pgs_distribution_metadata.partition
+			ALTER COLUMN relation_id SET DATA TYPE regclass;
+		ALTER TABLE pgs_distribution_metadata.shard
+			ALTER COLUMN relation_id SET DATA TYPE regclass;
+
 		-- add default values to id columns
 		ALTER TABLE pgs_distribution_metadata.shard
 			ALTER COLUMN id

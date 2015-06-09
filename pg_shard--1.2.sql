@@ -82,11 +82,11 @@ BEGIN
 		-- metadata relations are views under CitusDB
 		CREATE SCHEMA pgs_distribution_metadata
 			CREATE VIEW shard AS
-				SELECT shardid       AS id,
-					   logicalrelid  AS relation_id,
-					   shardstorage  AS storage,
-					   shardminvalue AS min_value,
-					   shardmaxvalue AS max_value
+				SELECT shardid                AS id,
+					   logicalrelid::regclass AS relation_id,
+					   shardstorage           AS storage,
+					   shardminvalue          AS min_value,
+					   shardmaxvalue          AS max_value
 				FROM   pg_dist_shard
 
 			CREATE TRIGGER shard_insert INSTEAD OF INSERT ON shard
@@ -106,9 +106,9 @@ BEGIN
 				EXECUTE PROCEDURE adapt_and_insert_shard_placement()
 
 			CREATE VIEW partition AS
-				SELECT logicalrelid AS relation_id,
-					   partmethod   AS partition_method,
-					   column_to_column_name(logicalrelid, partkey) AS key
+				SELECT logicalrelid::regclass AS relation_id,
+					   partmethod             AS partition_method,
+					   column_to_column_name(relation_id, partkey) AS key
 				FROM   pg_dist_partition
 
 			CREATE TRIGGER partition_insert INSTEAD OF INSERT ON partition
@@ -121,7 +121,7 @@ BEGIN
 			-- shard keeps track of hash value ranges for each shard
 			CREATE TABLE shard (
 				id bigint primary key default nextval('shard_id_sequence'),
-				relation_id oid not null,
+				relation_id regclass not null,
 				storage "char" not null,
 				min_value text not null,
 				max_value text not null
@@ -138,7 +138,7 @@ BEGIN
 
 			-- partition lists a partition key for each distributed table
 			CREATE TABLE partition (
-				relation_id oid unique not null,
+				relation_id regclass unique not null,
 				partition_method "char" not null,
 				key text not null
 			)
